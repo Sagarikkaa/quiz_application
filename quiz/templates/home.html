@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Quiz Generator</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'design.css' %}">
+</head>
+<body>
+<div class="container">
+    <h1>Smart MCQ Generator</h1>
+    <p>Upload PDF/DOCX/TXT, paste text, or provide a link to generate questions.</p>
+
+{% if error %}
+    <p style="color:red;"><strong>Error:</strong> {{ error }}</p>
+{% endif %}
+
+<form method="POST" enctype="multipart/form-data" class="box">
+    {% csrf_token %}
+    <label>Input mode:</label>
+    <select name="input_mode">
+        <option value="file">File (PDF/DOCX/TXT)</option>
+        <option value="text">Text</option>
+        <option value="link">Link (webpage)</option>
+    </select>
+
+    <div>
+        <label>File upload (PDF/DOCX/TXT):</label>
+        <input type="file" name="content_file">
+    </div>
+    <div>
+        <label>Text input:</label>
+        <textarea name="content_text" rows="6" style="width:100%;"></textarea>
+    </div>
+    <div>
+        <label>Link input:</label>
+        <input type="url" name="content_link" style="width:100%;" placeholder="https://example.com/article">
+    </div>
+    <label>Number of questions to generate (max 15):</label>
+    <input type="number" name="num_questions" value="5" min="1" max="15" style="width: 80px;">
+    <button type="submit" name="action" value="generate">Generate Quiz</button>
+</form>
+
+{% if questions %}
+    <form method="POST" class="box">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="submit_quiz">
+        <input type="hidden" name="question_count" value="{{ questions|length }}">
+        <h2>Generated Quiz</h2>
+        {% for q in questions %}
+            <div style="margin-bottom: 14px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                <p><strong>{{ forloop.counter }}. {{ q.question }}</strong></p>
+                {% for opt in q.options %}
+                    <label><input type="radio" name="answer_{{ forloop.parentloop.counter0 }}" value="{{ opt }}" required> {{ opt }}</label>
+                {% endfor %}
+                <input type="hidden" name="question_{{ forloop.counter0 }}" value="{{ q.question }}">
+                <input type="hidden" name="correct_{{ forloop.counter0 }}" value="{{ q.answer }}">
+                {% for opt in q.options %}
+                    <input type="hidden" name="options_{{ forloop.parentloop.counter0 }}" value="{{ opt }}">
+                {% endfor %}
+            </div>
+        {% endfor %}
+        <button type="submit">Submit Answers</button>
+    </form>
+{% endif %}
+
+{% if results %}
+    <div class="box">
+        <h2>Results</h2>
+        <p><strong>{{ score_text }}</strong></p>
+        <ul>
+            {% for r in results %}
+                <li>
+                    <strong>{{ forloop.counter }}.</strong> {{ r.question }}<br>
+                    Your answer: {{ r.selected }} — <span style="color: {% if r.is_correct %}green{% else %}red{% endif %};">{% if r.is_correct %}Correct{% else %}Wrong{% endif %}</span><br>
+                    Correct answer: {{ r.correct }}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+</div>
+</body>
+</html>
